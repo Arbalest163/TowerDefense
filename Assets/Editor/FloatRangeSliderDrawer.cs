@@ -8,6 +8,9 @@ public class FloatRangeSliderDrawer : PropertyDrawer
     {
         int originalIndentLevel = EditorGUI.indentLevel;
         EditorGUI.BeginProperty(position, label, property);
+
+        position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
+        EditorGUI.indentLevel = 0;
         SerializedProperty minProperty = property.FindPropertyRelative("_min");
         SerializedProperty maxProperty = property.FindPropertyRelative("_max");
         float minValue = minProperty.floatValue;
@@ -27,6 +30,7 @@ public class FloatRangeSliderDrawer : PropertyDrawer
         {
             minValue = limit.Min;
         }
+
         if (maxValue > limit.Max)
         {
             maxValue = limit.Max;

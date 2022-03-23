@@ -5,10 +5,7 @@ using UnityEngine;
 public struct FloatRange
 {
     [SerializeField]
-    private float _min;
-
-    [SerializeField]
-    private float _max;
+    private float _min, _max;
     public float Min => _min;
     public float Max => _max;
     public float RandomValueRange => UnityEngine.Random.Range(_min, _max);
@@ -16,6 +13,7 @@ public struct FloatRange
     public FloatRange(float min, float max) => (_min, _max) = (min, max);
 }
 
+[Serializable]
 public class FloatRangeSliderAttribute : PropertyAttribute
 {
     public float Min { get; private set; }

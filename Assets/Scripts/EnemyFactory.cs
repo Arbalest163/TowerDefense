@@ -1,26 +1,44 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 [CreateAssetMenu]
 public class EnemyFactory : GameObjectFactory
 {
-    [SerializeField]
-    private Enemy _enemyPrefab;
-
-    [SerializeField, FloatRangeSlider(0.5f, 2f)]
-    private FloatRange _scale = new FloatRange(1f);
-
-    [SerializeField, FloatRangeSlider(-0.4f, 0.4f)]
-    private FloatRange _pathOffset = new FloatRange(0f);
-
-    [SerializeField, FloatRangeSlider(0.2f, 5f)]
-    private FloatRange _speed = new FloatRange(0f);
-
-    public Enemy Get()
+    [Serializable]
+    class EnemyConfig
     {
-        var instance = CreateGameObjectInstance(_enemyPrefab);
+        public Enemy Prefab;
+        [FloatRangeSlider(0.5f, 2f)]
+        public FloatRange Scale = new FloatRange(1f);
+        [FloatRangeSlider(-0.4f, 0.4f)]
+        public FloatRange PathOffset = new FloatRange(0f);
+        [FloatRangeSlider(0.2f, 5f)]
+        public FloatRange Speed = new FloatRange(1f);
+        [FloatRangeSlider(10f, 1000f)]
+        public FloatRange Health = new FloatRange(100f);
+    }
+
+    [SerializeField]
+    private EnemyConfig _small, _medium, _large;
+
+    public Enemy Get(EnemyType type)
+    {
+        var config = GetConfig(type);
+        var instance = CreateGameObjectInstance(config.Prefab);
         instance.OriginFactory = this;
-        instance.Initialize(_scale.RandomValueRange, _pathOffset.RandomValueRange, _speed.RandomValueRange);
+        instance.Initialize(config.Scale.RandomValueRange, config.PathOffset.RandomValueRange, config.Speed.RandomValueRange, config.Health.RandomValueRange);
         return instance;
+    }
+
+    private EnemyConfig GetConfig(EnemyType type)
+    {
+        return type switch
+        {
+            EnemyType.Large => _large,
+            EnemyType.Medium => _medium,
+            EnemyType.Small => _small,
+            _ => _medium
+        };
     }
 
     public void Reclaim(Enemy enemy)

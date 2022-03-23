@@ -22,6 +22,8 @@ public class GameBoard : MonoBehaviour
 
     public int SpawnPointCount => _spawnPoints.Count;
 
+    private List<GameTileContent> _contentUpdate = new List<GameTileContent> ();
+
     public void Initilize(Vector2Int size, GameTileContentFactory contentFactory)
     { 
         _size = size;
@@ -60,6 +62,14 @@ public class GameBoard : MonoBehaviour
 
         ToggleDestination(_tiles[_tiles.Length / 2]);
         ToggleSpawnPoint(_tiles[0]);
+    }
+
+    public void GameUpdate()
+    {
+        for (int i = 0; i < _contentUpdate.Count; i++)
+        {
+            _contentUpdate[i].GameUpdate();
+        }
     }
 
     public bool FindPaths()
@@ -157,6 +167,35 @@ public class GameBoard : MonoBehaviour
         }
     }
 
+    public void ToggleTower(GameTile tile, TowerType towerType)
+    {
+        if (tile.Content.Type == GameTileContentType.Tower)
+        {
+            _contentUpdate.Remove(tile.Content);
+            tile.Content = _contentFactory.Get(GameTileContentType.Empty);
+            FindPaths();
+        }
+        else if (tile.Content.Type == GameTileContentType.Empty)
+        {
+            tile.Content = _contentFactory.Get(towerType);
+            
+            if (FindPaths())
+            {
+                _contentUpdate.Add(tile.Content);
+            }
+            else
+            {
+                tile.Content = _contentFactory.Get(GameTileContentType.Empty);
+                FindPaths();
+            }
+        }
+        else if (tile.Content.Type == GameTileContentType.Wall)
+        {
+            tile.Content = _contentFactory.Get(towerType);
+            _contentUpdate.Add(tile.Content);
+        }
+    }
+
     public void ToggleSpawnPoint(GameTile tile)
     {
         if (tile.Content.Type == GameTileContentType.SpawnPoint)
@@ -176,7 +215,7 @@ public class GameBoard : MonoBehaviour
 
     public GameTile GetTile(Ray ray)
     {
-        if (Physics.Raycast(ray, out RaycastHit hit))
+        if (Physics.Raycast(ray, out RaycastHit hit, float.MaxValue, 1))
         {
             /*
                 Так как физический ноль в центре, а нулевая клетка в вехнем левом углу,
@@ -195,6 +234,6 @@ public class GameBoard : MonoBehaviour
 
     public GameTile GetSpawnPoint(int index)
     { 
-    return _spawnPoints[index];
+        return _spawnPoints[index];
     }
 }

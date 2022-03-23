@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Enemy : MonoBehaviour
+public class Enemy : GameBehavior
 {
     [SerializeField]
     private Transform _model;
@@ -23,11 +23,17 @@ public class Enemy : MonoBehaviour
     private float _pathOffset;
     private float _speed;
 
-    public void Initialize(float scale, float pathOffset, float speed)
+    public float Scale { get; private set; }
+
+    public float Health { get; private set; }
+
+    public void Initialize(float scale, float pathOffset, float speed, float health)
     { 
         _model.localScale = new Vector3(scale, scale, scale);
         _pathOffset = pathOffset;
         _speed = speed;
+        Scale = scale;
+        Health = health;
     }
 
     public void SpawnOn(GameTile tile)
@@ -61,8 +67,13 @@ public class Enemy : MonoBehaviour
         _progressFactor = 2f * _speed;
     }
 
-    public bool GameUpdate()
+    public override bool GameUpdate()
     {
+        if (Health <= 0)
+        {
+            OriginFactory.Reclaim(this);
+            return false;
+        }
         _progress += Time.deltaTime * _progressFactor;
         while (_progress >= 1)
         { 
@@ -87,6 +98,11 @@ public class Enemy : MonoBehaviour
             transform.localRotation = Quaternion.Euler(0f, angle, 0f);
         }
         return true;
+    }
+
+    public void TakeDamage(float damage)
+    {
+        Health -= damage;
     }
 
     private void PrepareNextState()

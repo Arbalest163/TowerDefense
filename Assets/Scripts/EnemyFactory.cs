@@ -19,7 +19,7 @@ public class EnemyFactory : GameObjectFactory
     }
 
     [SerializeField]
-    private EnemyConfig _small, _medium, _large;
+    private EnemyConfig _small, _medium, _golem, _zombie;
 
     public Enemy Get(EnemyType type)
     {
@@ -34,9 +34,10 @@ public class EnemyFactory : GameObjectFactory
     {
         return type switch
         {
-            EnemyType.Large => _large,
+            EnemyType.Golem => _golem,
             EnemyType.Medium => _medium,
             EnemyType.Small => _small,
+            EnemyType.Zombie => _zombie,
             _ => _medium
         };
     }

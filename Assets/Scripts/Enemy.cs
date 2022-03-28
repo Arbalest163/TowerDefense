@@ -4,6 +4,10 @@ public class Enemy : GameBehavior
 {
     [SerializeField]
     private Transform _model;
+
+    [SerializeField]
+    private EnemyView _view;
+
     public EnemyFactory OriginFactory { get; set; }
 
     private GameTile _tileFrom;
@@ -19,21 +23,25 @@ public class Enemy : GameBehavior
     private DirectionChange _directionChange;
     private float _directionAngleFrom;
     private float _directionAngleTo;
-
     private float _pathOffset;
     private float _speed;
+    private float _originalSpeed;
+    private float _tempSpeedFactor;
 
     public float Scale { get; private set; }
-
     public float Health { get; private set; }
+
+    private const float CHANGE_DIR_SPEED_MULTIPLIER = 0.8f;
 
     public void Initialize(float scale, float pathOffset, float speed, float health)
     { 
         _model.localScale = new Vector3(scale, scale, scale);
         _pathOffset = pathOffset;
         _speed = speed;
+        _originalSpeed = speed;
         Scale = scale;
         Health = health;
+        _view.Init(this);
     }
 
     public void SpawnOn(GameTile tile)
@@ -69,9 +77,14 @@ public class Enemy : GameBehavior
 
     public override bool GameUpdate()
     {
+        if(_view.IsInited == false)
+        {
+            return true;
+        }
         if (Health <= 0)
         {
-            OriginFactory.Reclaim(this);
+            DisableView();
+            _view.Die();
             return false;
         }
         _progress += Time.deltaTime * _progressFactor;
@@ -79,7 +92,8 @@ public class Enemy : GameBehavior
         { 
             if (_tileTo == null)
             {
-                OriginFactory.Reclaim(this);
+                Game.EnemyReachedDestination();
+                Recycle();
                 return false;
             }
            
@@ -105,6 +119,13 @@ public class Enemy : GameBehavior
         Health -= damage;
     }
 
+    public void SetSpeed(float factor)
+    {
+        _speed = _originalSpeed * factor;
+        HandleDirection();
+        _view.SetSpeedFactor(factor);
+    }
+
     private void PrepareNextState()
     {
         _tileFrom = _tileTo;
@@ -119,12 +140,17 @@ public class Enemy : GameBehavior
         _direction = _tileFrom.PathDirection;
         _directionAngleFrom = _directionAngleTo;
 
-        switch(_directionChange)
+        HandleDirection();
+    }
+
+    private void HandleDirection()
+    {
+        switch (_directionChange)
         {
-            case DirectionChange.None: PrepareForward();break;
-            case DirectionChange.TurnRight: PrepareTurnRight();break;
-            case DirectionChange.TurnLeft: PrepareTurnLeft();break;
-            default: PrepareTurnAround();break;
+            case DirectionChange.None: PrepareForward(); break;
+            case DirectionChange.TurnRight: PrepareTurnRight(); break;
+            case DirectionChange.TurnLeft: PrepareTurnLeft(); break;
+            default: PrepareTurnAround(); break;
         }
     }
 
@@ -140,22 +166,31 @@ public class Enemy : GameBehavior
         _directionAngleTo = _directionAngleFrom + 90f;
         _model.localPosition = new Vector3(_pathOffset - 0.5f, 0f);
         transform.localPosition = _positionFrom + _direction.GetHalfVector();
-        _progressFactor = _speed / (Mathf.PI * 0.5f * (0.5f - _pathOffset));
+        _progressFactor = _speed * CHANGE_DIR_SPEED_MULTIPLIER;
     }
     private void PrepareTurnLeft()
     {
         _directionAngleTo = _directionAngleFrom - 90f;
         _model.localPosition = new Vector3(_pathOffset + 0.5f, 0f);
         transform.localPosition = _positionFrom + _direction.GetHalfVector();
-        _progressFactor = _speed / (Mathf.PI * 0.5f * (0.5f - _pathOffset));
+        _progressFactor = _speed * CHANGE_DIR_SPEED_MULTIPLIER;
     }
     private void PrepareTurnAround()
     {
         _directionAngleTo = _directionAngleFrom + (_pathOffset < 0f ? 180f : -180f);
         _model.localPosition = new Vector3(_pathOffset, 0f);
         transform.localPosition = _positionFrom;
-        _progressFactor = _speed / (Mathf.PI * Mathf.Max(Mathf.Abs(_pathOffset), 0.2f));
+        _progressFactor = _speed * CHANGE_DIR_SPEED_MULTIPLIER;
     }
-    
+
+    public override void Recycle()
+    {
+        OriginFactory.Reclaim(this);
+    }
+
+    private void DisableView()
+    {
+        _view.GetComponent<TargetPoint>().IsEnabled = false;
+    }
 }
 

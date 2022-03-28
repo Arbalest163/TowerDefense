@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class Game : MonoBehaviour
@@ -15,15 +16,22 @@ public class Game : MonoBehaviour
     private GameTileContentFactory _contentFactory;
 
     [SerializeField]
-    private EnemyFactory _enemyFactory;
-
-    [SerializeField, Range(0.1f,10f)]
-    private float _spawnSpeed;
-
-    [SerializeField]
     private WarFactory _warFactory;
 
-    private float _spawnProgress;
+    [SerializeField]
+    private GameScenario _scenario;
+
+    [SerializeField, Range(10, 100)]
+    private int _startingPlayerHealth = 10;
+
+    private int _currentPlayerHealth;
+
+    [SerializeField, Range(5f, 30f)]
+    private float _prepareTime = 10f;
+
+    private bool _scenarioInProcess;
+
+    private GameScenario.State _activeScenario;
 
     private GameBehaviorCollection _enemies = new GameBehaviorCollection();
     private GameBehaviorCollection _nonEnemies = new GameBehaviorCollection();
@@ -34,6 +42,8 @@ public class Game : MonoBehaviour
 
     private static Game _instance;
 
+    private bool _isPaused;
+
     private void OnEnable()
     {
         _instance = this;
@@ -42,10 +52,22 @@ public class Game : MonoBehaviour
     void Start()
     {
         _board.Initilize(_boardSize, _contentFactory);
+        BeginNewGame();
     }
 
     private void Update()
     {
+        if(Input.GetKeyDown(KeyCode.Space))
+        {
+            _isPaused = !_isPaused;
+            Time.timeScale = _isPaused ? 0f : 1.0f;
+        }
+
+        if(Input.GetKeyDown(KeyCode.R))
+        {
+            BeginNewGame();
+        }
+
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
             _currentTowerType = TowerType.Laser;
@@ -64,11 +86,20 @@ public class Game : MonoBehaviour
             HandleAlternativeTouch();
         }
 
-        _spawnProgress +=_spawnSpeed * Time.deltaTime;
-        while (_spawnProgress >= 1f)
+        if(_scenarioInProcess)
         {
-            _spawnProgress -= 1f;
-            SpawnEnemy();
+            if (_currentPlayerHealth <= 0)
+            {
+                Debug.Log("Defeated");
+                BeginNewGame();
+            }
+
+            if (!_activeScenario.Progress() && _enemies.IsEmpty)
+            {
+                Debug.Log("Victory");
+                BeginNewGame();
+                _activeScenario.Progress();
+            }
         }
 
         _enemies.GameUpdate();
@@ -77,12 +108,12 @@ public class Game : MonoBehaviour
         _nonEnemies.GameUpdate();
     }
 
-    private void SpawnEnemy()
+    public static void SpawnEnemy(EnemyFactory factory, EnemyType type)
     {
-        var spawnPoint = _board.GetSpawnPoint(Random.Range(0, _board.SpawnPointCount));
-        var enemy = _enemyFactory.Get((EnemyType)Random.Range(0,3));
+        var spawnPoint = _instance._board.GetSpawnPoint(Random.Range(0, _instance._board.SpawnPointCount));
+        var enemy = factory.Get(type);
         enemy.SpawnOn(spawnPoint);
-        _enemies.Add(enemy);
+        _instance._enemies.Add(enemy);
     }
 
     private void HandleTouch()
@@ -127,6 +158,34 @@ public class Game : MonoBehaviour
         Explosion explosion = _instance._warFactory.Explosion;
         _instance._nonEnemies.Add(explosion);
         return explosion;
+    }
+
+    private void BeginNewGame()
+    {
+        _scenarioInProcess = false;
+        if(_prepareCoroutine != null)
+        {
+            StopCoroutine(_prepareCoroutine);
+        }
+        _enemies.Clear();
+        _nonEnemies.Clear();
+        _board.Clear();
+        _currentPlayerHealth = _startingPlayerHealth;
+        _prepareCoroutine = StartCoroutine(PrepareCoroutine());
+    }
+
+    public static void EnemyReachedDestination()
+    {
+        _instance._currentPlayerHealth--;
+    }
+
+    private Coroutine _prepareCoroutine;
+
+    private IEnumerator PrepareCoroutine()
+    {
+        yield return new WaitForSeconds(_prepareTime);
+        _activeScenario = _scenario.Begin();
+        _scenarioInProcess = true;
     }
 }
 

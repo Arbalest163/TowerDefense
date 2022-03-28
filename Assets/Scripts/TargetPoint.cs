@@ -3,6 +3,17 @@ using UnityEngine;
 public class TargetPoint : MonoBehaviour
 {
    public Enemy Enemy { get; private set; }
+
+    private bool _isEnabled;
+    public bool IsEnabled
+    {
+        get { return _isEnabled; }
+        set
+        {
+            _collider.enabled = value;
+            _isEnabled = value;
+        }
+    }
     public Vector3 Position => transform.position;
 
     private const int ENEMY_LAYER_MASK = 1 << 9;
@@ -13,10 +24,13 @@ public class TargetPoint : MonoBehaviour
 
     public float ColiderSize { get; private set; }
 
+    private SphereCollider _collider;
+
     private void Awake()
     {
-        Enemy = transform.root.GetComponent<Enemy>(); 
-        ColiderSize = GetComponent<SphereCollider>().radius * transform.localScale.x;
+        Enemy = transform.root.GetComponent<Enemy>();
+        _collider = GetComponent<SphereCollider>();
+        ColiderSize = _collider.radius * transform.localScale.x;
 
     }
 

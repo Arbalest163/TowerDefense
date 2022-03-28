@@ -1,6 +1,7 @@
 public enum EnemyType
 {
-    Large,
+    Golem,
     Medium,
-    Small
+    Small,
+    Zombie
 }
